@@ -4,10 +4,14 @@
 
 package frc.robot;
 
+import static edu.wpi.first.units.Units.MetersPerSecond;
+import static edu.wpi.first.units.Units.Seconds;
+
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.units.measure.Time;
 
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide
@@ -44,6 +48,8 @@ public final class Constants {
     public static final double kFrontRightChassisAngularOffset = 0;
     public static final double kBackLeftChassisAngularOffset = Math.PI;
     public static final double kBackRightChassisAngularOffset = Math.PI / 2;
+
+    public static final Time kPeriodicInterval = Seconds.of(0.02);
 
     // SPARK MAX CAN IDs
     public static final int kFrontLeftDrivingCanId = 11;
