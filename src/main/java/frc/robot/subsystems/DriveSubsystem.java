@@ -8,6 +8,7 @@ package frc.robot.subsystems;
 import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.hal.HAL;
+import edu.wpi.first.math.estimator.PoseEstimator;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -17,14 +18,21 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.math.util.Units;
+import edu.wpi.first.units.TimeUnit;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import frc.robot.Constants.DriveConstants;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.sim.ChassisReference;
+import com.ctre.phoenix6.sim.Pigeon2SimState;
 
+import static edu.wpi.first.units.Units.DegreesPerSecond;
 import static edu.wpi.first.units.Units.Meters;
+import static edu.wpi.first.units.Units.Seconds;
 
 import com.ctre.phoenix6.configs.Pigeon2Configuration;
 
@@ -55,6 +63,9 @@ public class DriveSubsystem extends SubsystemBase {
 
   // The gyro sensor
   private final Pigeon2 pidgey = new Pigeon2(1, "rio");
+  private final Pigeon2SimState m_simPidgey = pidgey.getSimState();
+
+  private final Field2d m_field = new Field2d();
 
   // Odometry class for tracking robot pose
   SwerveDriveOdometry m_odometry = new SwerveDriveOdometry( DriveConstants.kDriveKinematics,
@@ -66,7 +77,7 @@ public class DriveSubsystem extends SubsystemBase {
       m_rearRight.getPosition()
   });
 
- SwerveDrivePoseEstimator m_poseEstimator = new SwerveDrivePoseEstimator(
+ SwerveDrivePoseEstimator poseEstimator = new SwerveDrivePoseEstimator(
   DriveConstants.kDriveKinematics,
   new Rotation2d(pidgey.getYaw().getValue()),
   new SwerveModulePosition[] {
@@ -74,7 +85,7 @@ public class DriveSubsystem extends SubsystemBase {
       m_frontRight.getPosition(),
       m_rearLeft.getPosition(),
       m_rearRight.getPosition()
-  }, new Pose2d(new Translation2d(), new Rotation2d(0.0)));
+  }, new Pose2d(new Translation2d(), new Rotation2d()));
 
   /** Creates a new DriveSubsystem. */
   public DriveSubsystem() {
@@ -104,7 +115,28 @@ public class DriveSubsystem extends SubsystemBase {
     return m_odometry.getPoseMeters();
   }
 
-  public void SimulationPeriodic() {}
+  public SwerveModulePosition[] getModulePositions() {
+    return new SwerveModulePosition[]{
+      m_frontLeft.getPosition(), m_frontRight.getPosition(),
+      m_rearLeft.getPosition(), m_rearRight.getPosition()
+    };
+  }
+
+  public void SimulationPeriodic() {
+    ChassisSpeeds chassisSpeed = DriveConstants.kDriveKinematics.toChassisSpeeds(
+      m_frontLeft.getState(), m_frontRight.getState(), m_rearLeft.getState(),
+    m_rearRight.getState());
+    
+    m_simPidgey.setSupplyVoltage(RobotController.getBatteryVoltage());
+    m_simPidgey.setRawYaw(getHeading() +
+      Units.radiansToDegrees(chassisSpeed.omegaRadiansPerSecond) * 
+        DriveConstants.kPeriodicInterval.in(Seconds));
+    poseEstimator.update(new Rotation2d(getHeading()), getModulePositions());
+    m_field.setRobotPose(poseEstimator.getEstimatedPosition());
+  }
+  
+  
+
 
   /**
    * Resets the odometry to the specified pose.
