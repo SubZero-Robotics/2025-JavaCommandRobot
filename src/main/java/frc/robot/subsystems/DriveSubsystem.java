@@ -23,7 +23,10 @@ import edu.wpi.first.units.TimeUnit;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.robot.Robot;
 import frc.robot.Constants.DriveConstants;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import com.ctre.phoenix6.hardware.Pigeon2;
@@ -62,7 +65,7 @@ public class DriveSubsystem extends SubsystemBase {
   
 
   // The gyro sensor
-  private final Pigeon2 pidgey = new Pigeon2(1, "rio");
+  private final Pigeon2 pidgey = new Pigeon2(13, "rio");
   private final Pigeon2SimState m_simPidgey = pidgey.getSimState();
 
   private final Field2d m_field = new Field2d();
@@ -104,6 +107,27 @@ public class DriveSubsystem extends SubsystemBase {
             m_rearLeft.getPosition(),
             m_rearRight.getPosition()
         });
+
+    SmartDashboard.putData(m_field);
+
+    if (Robot.isSimulation()) {
+      ChassisSpeeds chassisSpeed = DriveConstants.kDriveKinematics.toChassisSpeeds(
+        m_frontLeft.getState(), m_frontRight.getState(), m_rearLeft.getState(),
+      m_rearRight.getState());
+      
+      m_simPidgey.setSupplyVoltage(RobotController.getBatteryVoltage());
+      m_simPidgey.setRawYaw(getHeading() +
+        // This didn't work; chassisSpeed.omegaRadiansPerSecond is somehow in degrees
+        chassisSpeed.omegaRadiansPerSecond *
+        DriveConstants.kPeriodicInterval.in(Seconds));
+      poseEstimator.update(new Rotation2d(getHeading()), getModulePositions());
+      m_field.setRobotPose(poseEstimator.getEstimatedPosition());
+
+      // m_simPidgey.setRawYaw(3.4);
+
+      System.out.println(chassisSpeed + ", " +
+                         getHeading());
+    }
   }
 
   /**
@@ -116,6 +140,9 @@ public class DriveSubsystem extends SubsystemBase {
   }
 
   public SwerveModulePosition[] getModulePositions() {
+
+    // System.out.println("Front Left Position: " + m_frontLeft.getPosition().distanceMeters);
+
     return new SwerveModulePosition[]{
       m_frontLeft.getPosition(), m_frontRight.getPosition(),
       m_rearLeft.getPosition(), m_rearRight.getPosition()
@@ -123,16 +150,16 @@ public class DriveSubsystem extends SubsystemBase {
   }
 
   public void SimulationPeriodic() {
-    ChassisSpeeds chassisSpeed = DriveConstants.kDriveKinematics.toChassisSpeeds(
-      m_frontLeft.getState(), m_frontRight.getState(), m_rearLeft.getState(),
-    m_rearRight.getState());
+    // ChassisSpeeds chassisSpeed = DriveConstants.kDriveKinematics.toChassisSpeeds(
+    //   m_frontLeft.getState(), m_frontRight.getState(), m_rearLeft.getState(),
+    // m_rearRight.getState());
     
-    m_simPidgey.setSupplyVoltage(RobotController.getBatteryVoltage());
-    m_simPidgey.setRawYaw(getHeading() +
-      Units.radiansToDegrees(chassisSpeed.omegaRadiansPerSecond) * 
-        DriveConstants.kPeriodicInterval.in(Seconds));
-    poseEstimator.update(new Rotation2d(getHeading()), getModulePositions());
-    m_field.setRobotPose(poseEstimator.getEstimatedPosition());
+    // m_simPidgey.setSupplyVoltage(RobotController.getBatteryVoltage());
+    // m_simPidgey.setRawYaw(getHeading() +
+    //   Units.radiansToDegrees(chassisSpeed.omegaRadiansPerSecond) * 
+    //     DriveConstants.kPeriodicInterval.in(Seconds));
+    // poseEstimator.update(new Rotation2d(getHeading()), getModulePositions());
+    // m_field.setRobotPose(poseEstimator.getEstimatedPosition());
   }
   
   
@@ -177,6 +204,7 @@ public class DriveSubsystem extends SubsystemBase {
             : new ChassisSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered));
     SwerveDriveKinematics.desaturateWheelSpeeds(
         swerveModuleStates, DriveConstants.kMaxSpeedMetersPerSecond);
+
     m_frontLeft.setDesiredState(swerveModuleStates[0]);
     m_frontRight.setDesiredState(swerveModuleStates[1]);
     m_rearLeft.setDesiredState(swerveModuleStates[2]);
