@@ -21,6 +21,7 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.TimeUnit;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
@@ -32,6 +33,10 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.sim.ChassisReference;
 import com.ctre.phoenix6.sim.Pigeon2SimState;
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.config.PIDConstants;
+import com.pathplanner.lib.config.RobotConfig;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 
 import static edu.wpi.first.units.Units.DegreesPerSecond;
 import static edu.wpi.first.units.Units.Meters;
@@ -65,7 +70,7 @@ public class DriveSubsystem extends SubsystemBase {
   
 
   // The gyro sensor
-  private final Pigeon2 pidgey = new Pigeon2(13, "rio");
+  private final Pigeon2 pidgey = new Pigeon2(DriveConstants.kPidgeyCanId, "rio");
   private final Pigeon2SimState m_simPidgey = pidgey.getSimState();
 
   private final Field2d m_field = new Field2d();
@@ -94,6 +99,49 @@ public class DriveSubsystem extends SubsystemBase {
   public DriveSubsystem() {
     // Usage reporting for MAXSwerve template
     HAL.report(tResourceType.kResourceType_RobotDrive, tInstances.kRobotDriveSwerve_MaxSwerve);
+
+    RobotConfig config;
+    try {
+      config = RobotConfig.fromGUISettings();
+    } catch (Exception e) {
+      e.printStackTrace();
+
+      // TODO: Find a better solution to ensure config is initialized when 
+      // AutoBuilder.configure() is reached
+      return;
+    }
+
+    AutoBuilder.configure(
+      this::getPose, // Robot pose supplier
+      this::resetOdometry, // Method to reset odometry (will be called if your auto has a starting pose)
+      this::getRobotRelativeSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
+      (speeds, feedforwards) -> drive(speeds), // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also optionally outputs individual module feedforwards
+      new PPHolonomicDriveController( // PPHolonomicController is the built in path following controller for holonomic drive trains
+              new PIDConstants(5.0, 0.0, 0.0), // Translation PID constants
+              new PIDConstants(5.0, 0.0, 0.0) // Rotation PID constants
+      ),
+      config,
+      () -> {
+        // Boolean supplier that controls when the path will be mirrored for the red alliance
+        // This will flip the path being followed to the red side of the field.
+        // THE ORIGIN WILL REMAIN ON THE BLUE SIDE
+        var alliance = DriverStation.getAlliance();
+        if (alliance.isPresent()) {
+          return alliance.get() == DriverStation.Alliance.Red;
+        }
+
+        return false;
+      }
+    );
+  }
+
+  ChassisSpeeds getRobotRelativeSpeeds() {
+    var fl = m_frontLeft.getState();
+    var fr = m_frontRight.getState();
+    var rl = m_rearLeft.getState();
+    var rr = m_rearRight.getState();
+
+    return DriveConstants.kDriveKinematics.toChassisSpeeds(fl, fr, rl, rr);
   }
 
   @Override
@@ -125,8 +173,8 @@ public class DriveSubsystem extends SubsystemBase {
 
       // m_simPidgey.setRawYaw(3.4);
 
-      System.out.println(chassisSpeed + ", " +
-                         getHeading());
+      // System.out.println(chassisSpeed + ", " +
+      //                    getHeading());
     }
   }
 
@@ -161,9 +209,6 @@ public class DriveSubsystem extends SubsystemBase {
     // poseEstimator.update(new Rotation2d(getHeading()), getModulePositions());
     // m_field.setRobotPose(poseEstimator.getEstimatedPosition());
   }
-  
-  
-
 
   /**
    * Resets the odometry to the specified pose.
@@ -209,6 +254,10 @@ public class DriveSubsystem extends SubsystemBase {
     m_frontRight.setDesiredState(swerveModuleStates[1]);
     m_rearLeft.setDesiredState(swerveModuleStates[2]);
     m_rearRight.setDesiredState(swerveModuleStates[3]);
+  }
+
+  public void drive(ChassisSpeeds speeds) {
+    setModuleStates(DriveConstants.kDriveKinematics.toSwerveModuleStates(speeds));
   }
 
   /**

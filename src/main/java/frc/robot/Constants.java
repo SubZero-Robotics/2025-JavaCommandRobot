@@ -32,6 +32,9 @@ public final class Constants {
     public static final double kMaxSpeedMetersPerSecond = 4.8;
     public static final double kMaxAngularSpeed = 2 * Math.PI; // radians per second
 
+    // Gyro
+    public static final int kPidgeyCanId = 13;
+
     // Chassis configuration
     public static final double kTrackWidth = Units.inchesToMeters(26.5);
     // Distance between centers of right and left wheels on robot
@@ -52,15 +55,15 @@ public final class Constants {
     public static final Time kPeriodicInterval = Seconds.of(0.02);
 
     // SPARK MAX CAN IDs
-    public static final int kFrontLeftDrivingCanId = 11;
-    public static final int kRearLeftDrivingCanId = 13;
-    public static final int kFrontRightDrivingCanId = 15;
-    public static final int kRearRightDrivingCanId = 17;
+    public static final int kFrontLeftDrivingCanId = 18;
+    public static final int kRearLeftDrivingCanId = 1;
+    public static final int kFrontRightDrivingCanId = 4;
+    public static final int kRearRightDrivingCanId = 9;
 
-    public static final int kFrontLeftTurningCanId = 10;
-    public static final int kRearLeftTurningCanId = 12;
-    public static final int kFrontRightTurningCanId = 14;
-    public static final int kRearRightTurningCanId = 16;
+    public static final int kFrontLeftTurningCanId = 2;
+    public static final int kRearLeftTurningCanId = 20;
+    public static final int kFrontRightTurningCanId = 5;
+    public static final int kRearRightTurningCanId = 8;
 
     public static final boolean kGyroReversed = false;
   }
