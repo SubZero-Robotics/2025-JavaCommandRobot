@@ -147,16 +147,6 @@ public class DriveSubsystem extends SubsystemBase {
   @Override
   public void periodic() {
     // Update the odometry in the periodic block
-    m_odometry.update(
-        new Rotation2d(pidgey.getYaw().getValue()),
-        new SwerveModulePosition[] {
-            m_frontLeft.getPosition(),
-            m_frontRight.getPosition(),
-            m_rearLeft.getPosition(),
-            m_rearRight.getPosition()
-        });
-
-    SmartDashboard.putData(m_field);
 
     if (Robot.isSimulation()) {
       ChassisSpeeds chassisSpeed = DriveConstants.kDriveKinematics.toChassisSpeeds(
@@ -170,6 +160,19 @@ public class DriveSubsystem extends SubsystemBase {
         DriveConstants.kPeriodicInterval.in(Seconds));
       poseEstimator.update(new Rotation2d(getHeading()), getModulePositions());
       m_field.setRobotPose(poseEstimator.getEstimatedPosition());
+
+      System.out.println("Gyro heading " + getHeading());
+
+      m_odometry.update(
+        new Rotation2d(getHeading()),
+        new SwerveModulePosition[] {
+            m_frontLeft.getPosition(),
+            m_frontRight.getPosition(),
+            m_rearLeft.getPosition(),
+            m_rearRight.getPosition()
+        });
+
+    SmartDashboard.putData(m_field);
 
       // m_simPidgey.setRawYaw(3.4);
 
@@ -245,7 +248,7 @@ public class DriveSubsystem extends SubsystemBase {
     var swerveModuleStates = DriveConstants.kDriveKinematics.toSwerveModuleStates(
         fieldRelative
             ? ChassisSpeeds.fromFieldRelativeSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered,
-            new Rotation2d(pidgey.getYaw().getValue()))
+            new Rotation2d(getHeading()))
             : new ChassisSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered));
     SwerveDriveKinematics.desaturateWheelSpeeds(
         swerveModuleStates, DriveConstants.kMaxSpeedMetersPerSecond);
