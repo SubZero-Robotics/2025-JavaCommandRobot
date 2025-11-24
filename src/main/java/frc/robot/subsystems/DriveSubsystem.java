@@ -161,7 +161,7 @@ public class DriveSubsystem extends SubsystemBase {
       poseEstimator.update(new Rotation2d(getHeading()), getModulePositions());
       m_field.setRobotPose(poseEstimator.getEstimatedPosition());
 
-      System.out.println("Gyro heading " + getHeading());
+      // System.out.println("Gyro heading " + getHeading());
 
       m_odometry.update(
         new Rotation2d(getHeading()),

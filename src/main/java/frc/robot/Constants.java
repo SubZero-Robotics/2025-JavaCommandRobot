@@ -4,14 +4,18 @@
 
 package frc.robot;
 
-import static edu.wpi.first.units.Units.MetersPerSecond;
-import static edu.wpi.first.units.Units.Seconds;
+// import static edu.wpi.first.units.Units.Degrees;
+// import static edu.wpi.first.units.Units.DegreesPerSecond;
+// import static edu.wpi.first.units.Units.RotationsPerSecond;
+// import static edu.wpi.first.units.Units.Seconds;
+// import static edu.wpi.first.units.Units.Inches;
+import static edu.wpi.first.units.Units.*;
 
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.units.measure.Time;
+import edu.wpi.first.units.measure.*;
 
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide
@@ -107,5 +111,32 @@ public final class Constants {
 
   public static final class NeoMotorConstants {
     public static final double kFreeSpeedRpm = 5676;
+  }
+
+  public static final class AlgaeArmConstants {
+    public static final int kArmMotorId = 17;
+    public static final int kIntakeMotorId = 6;
+    public static final double kP = 0.1;
+    public static final double kI = 0.0;
+    public static final double kD = 0.0;
+    public static final double kIZone = 0.0;
+    public static final double kFF = 0.0;
+
+    public static final double kHasAlgaeCurrent = 35;
+    
+    public static final AngularVelocity kMaxRpm = RotationsPerSecond.of(5676 / 60);
+    public static final Angle kHomeRotation = Degrees.of(0);
+    public static final Angle kMinRotation = Degrees.of(0);
+    public static final Angle kMaxRotation = Degrees.of(85);
+    public static final Angle kRelativeDistancePerRev = Degrees.of(360 / 75);
+    public static final Angle kAbsoluteDistancePerRev = Degrees.of(360);
+    public static final AngularVelocity kDefaultVelocity = DegreesPerSecond.of(10);
+    public static final double kVelocityScalar = 1.0;
+    public static final Angle kTolerance = Degrees.of(2);
+    public static final Distance kArmLength = Inches.of(17);
+    public static final Angle kAlgaeIntakePosition = Degrees.of(38);
+
+    // 0 Degrees from the robot is different from the mech
+    public static final Angle kMechOffset = Radians.of(-Math.PI / 2);
   }
 }
