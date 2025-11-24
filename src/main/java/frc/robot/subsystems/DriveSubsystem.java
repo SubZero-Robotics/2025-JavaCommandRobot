@@ -19,7 +19,9 @@ import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.units.AngleUnit;
 import edu.wpi.first.units.TimeUnit;
+import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
@@ -38,9 +40,9 @@ import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 
-import static edu.wpi.first.units.Units.DegreesPerSecond;
-import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.Seconds;
+import edu.wpi.first.units.Measure;
+import edu.wpi.first.units.MutableMeasure;
+import static edu.wpi.first.units.Units.*;
 
 import com.ctre.phoenix6.configs.Pigeon2Configuration;
 
@@ -154,14 +156,10 @@ public class DriveSubsystem extends SubsystemBase {
       m_rearRight.getState());
       
       m_simPidgey.setSupplyVoltage(RobotController.getBatteryVoltage());
-      m_simPidgey.setRawYaw(getHeading() +
-        // This didn't work; chassisSpeed.omegaRadiansPerSecond is somehow in degrees
-        chassisSpeed.omegaRadiansPerSecond *
-        DriveConstants.kPeriodicInterval.in(Seconds));
-      poseEstimator.update(new Rotation2d(getHeading()), getModulePositions());
-      m_field.setRobotPose(poseEstimator.getEstimatedPosition());
-
-      // System.out.println("Gyro heading " + getHeading());
+      m_simPidgey.setRawYaw(
+        getHeading().in(Degrees) + Radians.of(chassisSpeed.omegaRadiansPerSecond).in(Degrees)
+          * DriveConstants.kPeriodicInterval.in(Seconds)
+      );
 
       m_odometry.update(
         new Rotation2d(getHeading()),
@@ -172,13 +170,16 @@ public class DriveSubsystem extends SubsystemBase {
             m_rearRight.getPosition()
         });
 
-    SmartDashboard.putData(m_field);
-
       // m_simPidgey.setRawYaw(3.4);
 
       // System.out.println(chassisSpeed + ", " +
       //                    getHeading());
     }
+
+    poseEstimator.update(new Rotation2d(getHeading()), getModulePositions());
+    m_field.setRobotPose(poseEstimator.getEstimatedPosition());
+
+    SmartDashboard.putData(m_field);
   }
 
   /**
@@ -305,16 +306,7 @@ public class DriveSubsystem extends SubsystemBase {
    *
    * @return the robot's heading in degrees, from -180 to 180
    */
-  public double getHeading() {
-    return pidgey.getYaw().getValueAsDouble();
-  }
-
-  /**
-   * Returns the turn rate of the robot.
-   *
-   * @return The turn rate of the robot, in degrees per second
-   */
-  public double getTurnRate() {
-    return pidgey.getAngularVelocityZWorld().getValueAsDouble() * (DriveConstants.kGyroReversed ? -1.0 : 1.0);
+  public Angle getHeading() {
+    return pidgey.getYaw().getValue();
   }
 }

@@ -72,7 +72,7 @@ public class AlgaeArmSubsystem extends SubsystemBase {
     }
 
     public Command toIntakeAlgaePosition() {
-        return moveToPosition(AlgaeArmConstants.kAlgaeIntakePosition);
+        return moveToPosition(Degree.of(-50));
     }
 
     public Angle getAngle() {
