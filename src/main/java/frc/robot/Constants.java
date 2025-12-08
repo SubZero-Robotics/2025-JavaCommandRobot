@@ -139,4 +139,47 @@ public final class Constants {
     // 0 Degrees from the robot is different from the mech
     public static final Angle kMechOffset = Radians.of(-Math.PI / 2);
   }
+
+ public static final class ElevatorConstants {
+    public static final int kLeadElevatorMotorCanId = 19;
+    public static final int kFollowerElevatorMotorCanId = 7;
+
+    public static final int kBottomLimitSwitchPort = 1;
+    public static final int kTopLimitSwitchPort = 2;
+
+    // public static final PidSettings kElevatorPidSettings = {
+    //   160.0, 0.0, 0.0,
+    //   0.0, 0.0, false};
+
+    // public static final subzero::PidSettings kHomePidSettings = {
+    //   10.0, 0.0, 0.0,
+    //   0.0, 0.0, false};
+
+    public static final double kElevatorStartPosition = 4.875; //inches
+
+    public static final double kMaxRpm = 5676; //rpm
+
+    // Placeholder values
+    public static final double kMinDistance = 0; 
+    public static final double kMaxDistance = 20.1;
+    public static final double kRelativeDistancePerRev = (1.685 * Math.PI) / 36; // Pitch diameter of gear with 36:1 ratio gearbox
+    public static final double kDefaultVelocity = 0.66; //meters per second
+    public static final double kVelocityScalar = 1.0;
+    public static final double kTolerance = 0.1;
+
+    // // Placeholder
+    // public static final subzero::SingleAxisMechanism kElevatorMechanism {
+    // // min length
+    // 2_in,
+    // // angle
+    // 90_deg,
+    // // line width
+    // 10.0,
+    // // color
+    // subzero::Colorpublic static finalants::kRed};
+
+    public static final TrapezoidProfile.Constraints kThetaControllerConstraints = new TrapezoidProfile.Constraints(
+      1 * 10, 20);
+};
+
 }
