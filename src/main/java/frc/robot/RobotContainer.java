@@ -24,6 +24,7 @@ import frc.robot.Constants.DriveConstants;
 import frc.robot.Constants.OIConstants;
 import frc.robot.subsystems.AlgaeArmSubsystem;
 import frc.robot.subsystems.DriveSubsystem;
+import frc.robot.subsystems.ElevatorSubsystem;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
@@ -52,6 +53,8 @@ public class RobotContainer {
   // The driver's controller
   XboxController m_driverController = new XboxController(OIConstants.kDriverControllerPort);
   CommandXboxController m_commandDriverController = new CommandXboxController(OIConstants.kDriverControllerPort);
+
+  ElevatorSubsystem m_elevator = new ElevatorSubsystem();
 
   /**
    * The container for the robot. Contains subsystems, OI devices, and commands.
@@ -94,6 +97,10 @@ public class RobotContainer {
 
     m_commandDriverController.y().onTrue(m_algaeArm.home().andThen(new InstantCommand(() -> {
       System.out.println(m_algaeArm.getAngle());
+    })));
+
+    m_commandDriverController.a().onTrue(m_elevator.moveElevatorToPosition(Inches.of(15.0)).andThen(new InstantCommand(() -> {
+      System.out.println("Moving elevator to " + m_elevator.getPosition() + ".");
     })));
   }
 

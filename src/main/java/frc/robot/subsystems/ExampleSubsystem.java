@@ -32,7 +32,7 @@ public class ExampleSubsystem extends SubsystemBase {
    */
   public boolean exampleCondition() {
     // Query some boolean state, such as a digital sensor.
-    return false;
+    return true;
   }
 
   @Override

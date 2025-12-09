@@ -1,11 +1,9 @@
 package frc.robot.subsystems;
 
-import edu.wpi.first.wpilibj2.command.PIDSubsystem;
 import com.revrobotics.AbsoluteEncoder;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.sim.SparkAbsoluteEncoderSim;
 import com.revrobotics.sim.SparkMaxSim;
-import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkBase.ControlType;
@@ -16,28 +14,24 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.Measure;
+import edu.wpi.first.units.measure.*;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.simulation.BatterySim;
 import edu.wpi.first.wpilibj.simulation.ElevatorSim;
 import edu.wpi.first.wpilibj.simulation.RoboRioSim;
-import edu.wpi.first.wpilibj.simulation.SingleJointedArmSim;
 import edu.wpi.first.wpilibj.smartdashboard.Mechanism2d;
 import edu.wpi.first.wpilibj.smartdashboard.MechanismLigament2d;
 import edu.wpi.first.wpilibj.smartdashboard.MechanismRoot2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Robot;
-import frc.robot.Constants;
-import frc.robot.Constants.AlgaeArmConstants;
 import frc.robot.Constants.ElevatorConstants;
+import edu.wpi.first.wpilibj2.command.*;
 
 import static edu.wpi.first.units.Units.*;
 
-
-public class ElevatorSubsystem extends SubsystemBase
-{
+public class ElevatorSubsystem extends SubsystemBase {
     SparkMax m_leadMotor = new SparkMax(ElevatorConstants.kLeadElevatorMotorCanId, MotorType.kBrushless);
     SparkClosedLoopController m_pidController = m_leadMotor.getClosedLoopController();
 
@@ -46,33 +40,88 @@ public class ElevatorSubsystem extends SubsystemBase
     SparkMaxSim m_simElevatorMotor = new SparkMaxSim(m_leadMotor, DCMotor.getNEO(1));
     SparkAbsoluteEncoderSim m_simElevatorEncoder = m_simElevatorMotor.getAbsoluteEncoderSim();
 
-    double gearing = 1, carriageMassKg = 1, drumRadiusMeters = 1, minHeightMeter= 0, maxHeightMeters = 1, startingHeightMeters = 0;
-    boolean simulateGravity = true;
-
-    ElevatorSim elevatorSim = new ElevatorSim(DCMotor.getNEO(1), gearing, carriageMassKg, drumRadiusMeters, minHeightMeter, maxHeightMeters, simulateGravity , startingHeightMeters, 0.01, 0.00);
+    ElevatorSim m_elevatorSim = new ElevatorSim(DCMotor.getNEO(1), ElevatorConstants.gearing,
+            ElevatorConstants.carriageMassKg,
+            ElevatorConstants.drumRadiusMeters, ElevatorConstants.minHeightMeter, ElevatorConstants.maxHeightMeters,
+            ElevatorConstants.simulateGravity, ElevatorConstants.startingHeightMeters, 0.01, 0.00);
 
     RelativeEncoder m_encoder = m_leadMotor.getEncoder();
-    // AbsoluteEncoder m_absEnc = m_leadMotor.getAbsoluteEncoder();
+    AbsoluteEncoder m_absEnc = m_leadMotor.getAbsoluteEncoder();
 
     SparkMaxConfig config = new SparkMaxConfig();
 
     Mechanism2d mech = new Mechanism2d(3, 3);
     MechanismRoot2d root = mech.getRoot("elevatorBase", 5, 0);
 
-    MechanismLigament2d m_algaeArmMech = root.append(new MechanismLigament2d("Elevator", 0.5, 90));
+    MechanismLigament2d m_elevatorArmMech = root.append(new MechanismLigament2d("Elevator", 0.5, 90));
 
-    public ElevatorSubsystem() {        
-        // TODO: implement code below
-        //config.closedLoop.p(AlgaeArmConstants.kP)
-//         .i(AlgaeArmConstants.kI)
-//         .d(AlgaeArmConstants.kD)
-//         .outputRange(-1, 1);
-// m_algaeArmMotor.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+    public ElevatorSubsystem() {
 
-// m_encoder.setDistancePerPulse(Constants.kElevatorEncoderDistPerPulse);
+        config.closedLoop
+                .p(ElevatorConstants.kP)
+                .i(ElevatorConstants.kI)
+                .d(ElevatorConstants.kD)
+                .outputRange(-1, 1);
 
-//     // Publish Mechanism2d to SmartDashboard
-//     // To view the Elevator visualization, select Network Tables -> SmartDashboard -> Elevator Sim
-//     SmartDashboard.putData("Elevator Sim", m_mech2d);
+        m_leadMotor.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+
+        // Publish Mechanism2d to SmartDashboard
+        // To view the Elevator visualization, select Network Tables -> SmartDashboard
+        // -> Elevator Sim
+        SmartDashboard.putData("Elevator Sim", mech);
+    }
+
+    public Command moveElevatorToPosition(Distance distanceInInches) {
+        return new InstantCommand(() -> {
+            m_pidController.setReference(Rotations.of(distanceInInches.magnitude()
+                / ElevatorConstants.kRelativeDistancePerRev.magnitude()).magnitude(), ControlType.kPosition);
+            }
+        );
+    }
+
+    public Distance getPosition() {
+        if (!Robot.isReal())
+            return Inches
+                    .of(m_simElevatorEncoder.getPosition() * ElevatorConstants.kRelativeDistancePerRev.magnitude());
+
+        return Inches.of(m_absEnc.getPosition() * ElevatorConstants.kRelativeDistancePerRev.magnitude());
+    }
+
+    private LinearVelocity getVelocity() {
+        if (!Robot.isReal())
+            return InchesPerSecond.of(
+                    m_simElevatorEncoder.getVelocity() * ElevatorConstants.kRelativeDistancePerRev.magnitude() / 60.0);
+
+        return InchesPerSecond
+                .of(m_absEnc.getVelocity() * ElevatorConstants.kRelativeDistancePerRev.magnitude() / 60.0);
+    }
+
+    @Override
+    public void periodic() {
+        m_elevatorArmMech.setLength(3 * ElevatorConstants.kMinDistance.plus(getPosition()).magnitude()
+                / ElevatorConstants.kMaxDistance.magnitude());
+
+        // 3 Is the height of the mech2d widget
+        m_elevatorArmMech.setLength(3.0 * getPosition().magnitude() / ElevatorConstants.kMaxDistance.magnitude());
+
+        if (Robot.isSimulation()) {
+            m_elevatorSim.setInput(m_simElevatorMotor.getAppliedOutput() * RobotController.getBatteryVoltage());
+
+            m_elevatorSim.update(0.020);
+
+            m_simElevatorEncoder.setPosition(Inches.convertFrom(m_elevatorSim.getPositionMeters(), Meters)
+                    / ElevatorConstants.kRelativeDistancePerRev.magnitude());
+
+            m_simElevatorMotor.iterate(
+                    RotationsPerSecond.of(
+                            InchesPerSecond.convertFrom(
+                                    m_elevatorSim.getVelocityMetersPerSecond(), MetersPerSecond)
+                                    / ElevatorConstants.kRelativeDistancePerRev.magnitude())
+                            .magnitude() * 60.0,
+                    RoboRioSim.getVInVoltage(), 0.020);
+
+            RoboRioSim
+                    .setVInVoltage(BatterySim.calculateDefaultBatteryLoadedVoltage(m_elevatorSim.getCurrentDrawAmps()));
+        }
     }
 }

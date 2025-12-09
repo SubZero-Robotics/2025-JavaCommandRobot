@@ -160,13 +160,14 @@ public final class Constants {
     public static final double kMaxRpm = 5676; //rpm
 
     // Placeholder values
-    public static final double kMinDistance = 0; 
-    public static final double kMaxDistance = 20.1;
-    public static final double kRelativeDistancePerRev = (1.685 * Math.PI) / 36; // Pitch diameter of gear with 36:1 ratio gearbox
-    public static final double kDefaultVelocity = 0.66; //meters per second
+    public static final Distance kMinDistance = Inches.of(0.0); 
+    public static final Distance kMaxDistance = Inches.of(20.1);
+    public static final Distance kRelativeDistancePerRev = Inches.of((1.685 * Math.PI) / 36); // Pitch diameter of gear with 36:1 ratio gearbox
+    public static final LinearVelocity kDefaultVelocity = MetersPerSecond.of(0.66); //meters per second
     public static final double kVelocityScalar = 1.0;
-    public static final double kTolerance = 0.1;
-
+    public static final Distance kTolerance = Inches.of(0.1);
+    public static final double gearing = 1, carriageMassKg = 1, drumRadiusMeters = 1, minHeightMeter= 0, maxHeightMeters = 1, startingHeightMeters = 0;
+    public static final boolean simulateGravity = true;
     // // Placeholder
     // public static final subzero::SingleAxisMechanism kElevatorMechanism {
     // // min length
@@ -177,6 +178,12 @@ public final class Constants {
     // 10.0,
     // // color
     // subzero::Colorpublic static finalants::kRed};
+
+    public static final double kP = 160.0;
+    public static final double kI = 0.0;
+    public static final double kD = 0.0;
+    public static final double kIZone = 0.0;
+    public static final double kFF = 0.0;
 
     public static final TrapezoidProfile.Constraints kThetaControllerConstraints = new TrapezoidProfile.Constraints(
       1 * 10, 20);
