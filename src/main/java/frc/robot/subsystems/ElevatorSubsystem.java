@@ -41,9 +41,9 @@ public class ElevatorSubsystem extends SubsystemBase {
     SparkAbsoluteEncoderSim m_simElevatorEncoder = m_simElevatorMotor.getAbsoluteEncoderSim();
 
     ElevatorSim m_elevatorSim = new ElevatorSim(DCMotor.getNEO(1), ElevatorConstants.gearing,
-            ElevatorConstants.carriageMassKg,
-            ElevatorConstants.drumRadiusMeters, ElevatorConstants.minHeightMeter, ElevatorConstants.maxHeightMeters,
-            ElevatorConstants.simulateGravity, ElevatorConstants.startingHeightMeters, 0.01, 0.00);
+            ElevatorConstants.carriageMassKg.magnitude(),
+            ElevatorConstants.drumRadiusMeters.magnitude(), ElevatorConstants.kMinDistance.magnitude(), ElevatorConstants.kMaxDistance.magnitude(),
+            ElevatorConstants.simulateGravity, ElevatorConstants.kMinDistance.magnitude(), 0.01, 0.00);
 
     RelativeEncoder m_encoder = m_leadMotor.getEncoder();
     AbsoluteEncoder m_absEnc = m_leadMotor.getAbsoluteEncoder();
@@ -51,7 +51,7 @@ public class ElevatorSubsystem extends SubsystemBase {
     SparkMaxConfig config = new SparkMaxConfig();
 
     Mechanism2d mech = new Mechanism2d(3, 3);
-    MechanismRoot2d root = mech.getRoot("elevatorBase", 5, 0);
+    MechanismRoot2d root = mech.getRoot("elevatorBase", 1.5, 1);
 
     MechanismLigament2d m_elevatorArmMech = root.append(new MechanismLigament2d("Elevator", 0.5, 90));
 
@@ -80,7 +80,7 @@ public class ElevatorSubsystem extends SubsystemBase {
     }
 
     public Distance getPosition() {
-        if (!Robot.isReal())
+        if (Robot.isSimulation())
             return Inches
                     .of(m_simElevatorEncoder.getPosition() * ElevatorConstants.kRelativeDistancePerRev.magnitude());
 
@@ -98,30 +98,36 @@ public class ElevatorSubsystem extends SubsystemBase {
 
     @Override
     public void periodic() {
-        m_elevatorArmMech.setLength(3 * ElevatorConstants.kMinDistance.plus(getPosition()).magnitude()
-                / ElevatorConstants.kMaxDistance.magnitude());
-
         // 3 Is the height of the mech2d widget
         m_elevatorArmMech.setLength(3.0 * getPosition().magnitude() / ElevatorConstants.kMaxDistance.magnitude());
 
         if (Robot.isSimulation()) {
-            m_elevatorSim.setInput(m_simElevatorMotor.getAppliedOutput() * RobotController.getBatteryVoltage());
 
-            m_elevatorSim.update(0.020);
-
-            m_simElevatorEncoder.setPosition(Inches.convertFrom(m_elevatorSim.getPositionMeters(), Meters)
-                    / ElevatorConstants.kRelativeDistancePerRev.magnitude());
-
-            m_simElevatorMotor.iterate(
-                    RotationsPerSecond.of(
-                            InchesPerSecond.convertFrom(
-                                    m_elevatorSim.getVelocityMetersPerSecond(), MetersPerSecond)
-                                    / ElevatorConstants.kRelativeDistancePerRev.magnitude())
-                            .magnitude() * 60.0,
-                    RoboRioSim.getVInVoltage(), 0.020);
-
-            RoboRioSim
-                    .setVInVoltage(BatterySim.calculateDefaultBatteryLoadedVoltage(m_elevatorSim.getCurrentDrawAmps()));
         }
+
+        System.out.println(getPosition());
+    }
+
+    @Override
+    public void simulationPeriodic() {
+        m_elevatorSim.setInput(m_simElevatorMotor.getAppliedOutput() * RoboRioSim.getVInCurrent());
+
+        m_elevatorSim.update(0.020);
+
+        m_simElevatorEncoder.setPosition(Inches.convertFrom(m_elevatorSim.getPositionMeters(), Meters)
+                / ElevatorConstants.kRelativeDistancePerRev.magnitude());
+
+        System.out.println(m_elevatorSim.getPositionMeters());
+
+        // m_simElevatorMotor.iterate(
+        //         RotationsPerSecond.of(
+        //                 InchesPerSecond.convertFrom(
+        //                         m_elevatorSim.getVelocityMetersPerSecond(), MetersPerSecond)
+        //                         / ElevatorConstants.kRelativeDistancePerRev.magnitude())
+        //                 .magnitude() * 60.0,
+        //         RoboRioSim.getVInVoltage(), 0.020);
+
+        RoboRioSim
+                .setVInVoltage(BatterySim.calculateDefaultBatteryLoadedVoltage(m_elevatorSim.getCurrentDrawAmps()));
     }
 }
