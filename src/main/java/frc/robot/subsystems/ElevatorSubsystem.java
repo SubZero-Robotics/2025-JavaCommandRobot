@@ -2,7 +2,6 @@ package frc.robot.subsystems;
 
 import com.revrobotics.AbsoluteEncoder;
 import com.revrobotics.RelativeEncoder;
-import com.revrobotics.sim.SparkAbsoluteEncoderSim;
 import com.revrobotics.sim.SparkMaxSim;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkMax;
@@ -13,19 +12,14 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.config.SparkMaxConfig;
 
 import edu.wpi.first.math.system.plant.DCMotor;
-import edu.wpi.first.math.util.Units;
-import edu.wpi.first.units.Measure;
 import edu.wpi.first.units.measure.*;
-import edu.wpi.first.wpilibj.RobotController;
-import edu.wpi.first.wpilibj.simulation.BatterySim;
-import edu.wpi.first.wpilibj.simulation.ElevatorSim;
-import edu.wpi.first.wpilibj.simulation.RoboRioSim;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.Mechanism2d;
 import edu.wpi.first.wpilibj.smartdashboard.MechanismLigament2d;
 import edu.wpi.first.wpilibj.smartdashboard.MechanismRoot2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Robot;
+import frc.robot.Constants.DriveConstants;
 import frc.robot.Constants.ElevatorConstants;
 import edu.wpi.first.wpilibj2.command.*;
 
@@ -38,12 +32,15 @@ public class ElevatorSubsystem extends SubsystemBase {
     SparkMax m_followMotor = new SparkMax(ElevatorConstants.kFollowerElevatorMotorCanId, MotorType.kBrushless);
 
     SparkMaxSim m_simElevatorMotor = new SparkMaxSim(m_leadMotor, DCMotor.getNEO(1));
-    SparkAbsoluteEncoderSim m_simElevatorEncoder = m_simElevatorMotor.getAbsoluteEncoderSim();
 
-    ElevatorSim m_elevatorSim = new ElevatorSim(DCMotor.getNEO(1), ElevatorConstants.gearing,
-            ElevatorConstants.carriageMassKg.magnitude(),
-            ElevatorConstants.drumRadiusMeters.magnitude(), ElevatorConstants.kMinDistance.magnitude(), ElevatorConstants.kMaxDistance.magnitude(),
-            ElevatorConstants.simulateGravity, ElevatorConstants.kMinDistance.magnitude(), 0.01, 0.00);
+    // Tried simulation with this and it didn't work
+    // SparkAbsoluteEncoderSim m_simElevatorEncoder = m_simElevatorMotor.getAbsoluteEncoderSim();
+
+    // ElevatorSim m_elevatorSim = new ElevatorSim(DCMotor.getNEO(1), ElevatorConstants.gearing,
+    //         ElevatorConstants.carriageMassKg.magnitude(),
+    //         ElevatorConstants.drumRadiusMeters.magnitude(), ElevatorConstants.kMinDistance.magnitude(),
+    //         ElevatorConstants.kMaxDistance.magnitude(),
+    //         ElevatorConstants.simulateGravity, ElevatorConstants.kMinDistance.magnitude(), 0.01, 0.00);
 
     RelativeEncoder m_encoder = m_leadMotor.getEncoder();
     AbsoluteEncoder m_absEnc = m_leadMotor.getAbsoluteEncoder();
@@ -51,9 +48,17 @@ public class ElevatorSubsystem extends SubsystemBase {
     SparkMaxConfig config = new SparkMaxConfig();
 
     Mechanism2d mech = new Mechanism2d(3, 3);
-    MechanismRoot2d root = mech.getRoot("elevatorBase", 1.5, 1);
+    MechanismRoot2d root = mech.getRoot("elevatorBase", 1.5, 0);
 
     MechanismLigament2d m_elevatorArmMech = root.append(new MechanismLigament2d("Elevator", 0.5, 90));
+
+    boolean m_simElevatorIsMoving = false;
+    Distance m_simCurrentElevatorDistance = Meters
+            .of(Meters.convertFrom(ElevatorConstants.kElevatorStartPosition.magnitude(), Inches));
+    Distance m_simTargetElevatorDistance = Meters
+            .of(Meters.convertFrom(ElevatorConstants.kElevatorStartPosition.magnitude(), Inches));
+    Time m_simInitialElevatorMoveTime = Seconds.of(0.0);
+    double m_simulationCoefficient;
 
     public ElevatorSubsystem() {
 
@@ -72,28 +77,36 @@ public class ElevatorSubsystem extends SubsystemBase {
     }
 
     public Command moveElevatorToPosition(Distance distanceInInches) {
+        Distance distanceInMeters = Meters.of(Meters.convertFrom(distanceInInches.magnitude(), Inch));
+        if (Robot.isReal())
+            return new InstantCommand(() -> {
+                m_pidController.setReference(Rotations.of(distanceInInches.magnitude()
+                        / ElevatorConstants.kRelativeDistancePerRev.magnitude()).magnitude(), ControlType.kPosition);
+            });
+
         return new InstantCommand(() -> {
-            m_pidController.setReference(Rotations.of(distanceInInches.magnitude()
-                / ElevatorConstants.kRelativeDistancePerRev.magnitude()).magnitude(), ControlType.kPosition);
-            }
-        );
+            m_simElevatorIsMoving = true;
+            m_simInitialElevatorMoveTime = Seconds.of(Timer.getFPGATimestamp());
+            m_simTargetElevatorDistance = distanceInMeters;
+
+            System.out.println("Target elevator distance " + m_simTargetElevatorDistance);
+
+            // Using a parabola time curve that looks ax(x - 1). 'a' needs to be adjusted to
+            // change
+            // the area under the graph, and that coefficient is 6 times the intended
+            // distance to travel
+            m_simulationCoefficient = -6.0
+                    * m_simTargetElevatorDistance.minus(m_simCurrentElevatorDistance).magnitude();
+        });
     }
 
     public Distance getPosition() {
-        if (Robot.isSimulation())
+        if (Robot.isReal()) {
             return Inches
-                    .of(m_simElevatorEncoder.getPosition() * ElevatorConstants.kRelativeDistancePerRev.magnitude());
+                    .of(m_absEnc.getPosition() * ElevatorConstants.kRelativeDistancePerRev.magnitude());
+        }
 
-        return Inches.of(m_absEnc.getPosition() * ElevatorConstants.kRelativeDistancePerRev.magnitude());
-    }
-
-    private LinearVelocity getVelocity() {
-        if (!Robot.isReal())
-            return InchesPerSecond.of(
-                    m_simElevatorEncoder.getVelocity() * ElevatorConstants.kRelativeDistancePerRev.magnitude() / 60.0);
-
-        return InchesPerSecond
-                .of(m_absEnc.getVelocity() * ElevatorConstants.kRelativeDistancePerRev.magnitude() / 60.0);
+        return Inches.of(m_simCurrentElevatorDistance.in(Inches));
     }
 
     @Override
@@ -101,33 +114,29 @@ public class ElevatorSubsystem extends SubsystemBase {
         // 3 Is the height of the mech2d widget
         m_elevatorArmMech.setLength(3.0 * getPosition().magnitude() / ElevatorConstants.kMaxDistance.magnitude());
 
-        if (Robot.isSimulation()) {
-
-        }
-
-        System.out.println(getPosition());
+        // System.out.println(getPosition());
     }
 
     @Override
     public void simulationPeriodic() {
-        m_elevatorSim.setInput(m_simElevatorMotor.getAppliedOutput() * RoboRioSim.getVInCurrent());
+        if (m_simElevatorIsMoving) {
 
-        m_elevatorSim.update(0.020);
+            Time elaspedSinceStart = Seconds.of(Timer.getFPGATimestamp()).minus(m_simInitialElevatorMoveTime);
 
-        m_simElevatorEncoder.setPosition(Inches.convertFrom(m_elevatorSim.getPositionMeters(), Meters)
-                / ElevatorConstants.kRelativeDistancePerRev.magnitude());
+            // Because floating point numbers are innacurate, we cannot set the threshold to
+            // read position. However, we are integrating the velocity profile over 1
+            // second so we can stop moving the elevator once one second is reached and stop
+            // adjusting
+            if (elaspedSinceStart.gte(Seconds.of(1.0))) {
+                m_simElevatorIsMoving = false;
+                return;
+            }
 
-        System.out.println(m_elevatorSim.getPositionMeters());
+            LinearVelocity velocity = MetersPerSecond.of(
+                    m_simulationCoefficient * elaspedSinceStart.magnitude() * (elaspedSinceStart.magnitude() - 1.0));
 
-        // m_simElevatorMotor.iterate(
-        //         RotationsPerSecond.of(
-        //                 InchesPerSecond.convertFrom(
-        //                         m_elevatorSim.getVelocityMetersPerSecond(), MetersPerSecond)
-        //                         / ElevatorConstants.kRelativeDistancePerRev.magnitude())
-        //                 .magnitude() * 60.0,
-        //         RoboRioSim.getVInVoltage(), 0.020);
-
-        RoboRioSim
-                .setVInVoltage(BatterySim.calculateDefaultBatteryLoadedVoltage(m_elevatorSim.getCurrentDrawAmps()));
+            Distance deltaPosition = velocity.times(DriveConstants.kPeriodicInterval);
+            m_simCurrentElevatorDistance = m_simCurrentElevatorDistance.plus(deltaPosition);
+        }
     }
 }

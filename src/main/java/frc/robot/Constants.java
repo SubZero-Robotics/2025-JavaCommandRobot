@@ -155,7 +155,7 @@ public final class Constants {
     //   10.0, 0.0, 0.0,
     //   0.0, 0.0, false};
 
-    public static final double kElevatorStartPosition = 4.875; //inches
+    public static final Distance kElevatorStartPosition = Inches.of(4.875); //inches
 
     public static final double kMaxRpm = 5676; //rpm
 

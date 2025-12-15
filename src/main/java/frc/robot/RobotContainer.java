@@ -102,6 +102,10 @@ public class RobotContainer {
     m_commandDriverController.a().onTrue(m_elevator.moveElevatorToPosition(Inches.of(15.0)).andThen(new InstantCommand(() -> {
       System.out.println("Moving elevator to " + m_elevator.getPosition() + ".");
     })));
+
+    m_commandDriverController.b().onTrue(m_elevator.moveElevatorToPosition(Inches.of(0.0)).andThen(new InstantCommand(() -> {
+      System.out.println("Moving elevator to " + m_elevator.getPosition() + ".");
+    })));
   }
 
   /**
